@@ -3,7 +3,7 @@ dotenv.config()
 
 import express from 'express'
 import mongoose from 'mongoose'
-import apiRouter from './routes/api.js'
+import apiRouter from './routes/index.js'
 
 const app = express()
 app.use(express.json())
