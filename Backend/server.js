@@ -4,6 +4,12 @@ dotenv.config()
 import express from 'express'
 import mongoose from 'mongoose'
 import apiRouter from './routes/index.js'
+import path from 'path'
+
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
+const __dirname = path.dirname(__filename); // get the name of the directory
+
 
 const app = express()
 app.use(express.json())
@@ -21,5 +27,6 @@ db.once('open', () => console.log('^^Database connected^^'))
 
 
 app.use('/api', apiRouter)
+app.use('/images', express.static(path.join(__dirname, 'images')))
 
 app.listen(3000, () => console.log('^^server started^^'))
