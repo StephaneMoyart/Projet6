@@ -17,15 +17,21 @@ router.get('/books', (req, res) => {
         .catch(error => res.status(400).json({ error }))
 })
 
-router.get('/books/:id', (req, res) => {
-    Book.findOne({ _id: req.params.id })
-        .then(book => res.status(200).json(book))
-        .catch(error => res.status(400).json({ error }))
-})
-
 router.get('/books/bestrating', (req, res) => {
     Book.find()
-        .then(brtg => res.status(200).json(brtg))
+        .sort({ averageRating: -1 })  
+        .limit(3)
+        .then(topBooks => {
+            return res.status(200).json(topBooks)
+        })
+        .catch(error => {
+            return res.status(500).json({ error: 'Une erreur est survenue lors de la récupération des livres.' })
+        })
+})
+
+router.get('/books/:id', (req, res) => {
+    Book.findById(req.params.id)
+        .then(book => res.status(200).json(book))
         .catch(error => res.status(400).json({ error }))
 })
 
@@ -78,12 +84,34 @@ router.post('/books', auth, multer, (req, res) => {
         .catch(error => res.status(400).json({ error }))
 })
 
-router.post('/books/:id/rating', auth, (req, res) => {
-    delete req.body._id
-    const book = new Book(...req.body)
-    book.save()
-        .then(() => res.status(201).json({ message: 'Rating saved !'}))
-        .catch(error => res.status(400).json({ error }))
+router.post('/books/:id/rating', auth, multer, (req, res) => {
+    const userId = req.auth.userId;
+    const grade  = req.body.rating
+    
+    Book.findById( req.params.id )
+    .then( book => {
+        if (!book) {
+            return res.status(404).json({ message: 'Book not found' });
+        }
+        const existingRating = book.ratings.find(rating => rating.userId === userId)
+
+        if (existingRating) {
+            return res.status(400).json({ message: 'User has already rated this book and cannot change their rating.' })
+        }
+        book.ratings.push({ userId, grade })
+
+        const totalRatings = book.ratings.length
+        const averageRating = book.ratings.reduce((sum, rating) => sum + rating.grade, 0) / totalRatings
+        book.averageRating = averageRating
+
+        book.save()
+            .then(() => {
+                return res.status(201).json(book)
+            })
+            .catch (error => {
+                return res.status(400).json({ error })
+            })
+    })    
 })
 
 router.put('/books/:id', auth, multer, (req, res) => {
@@ -93,12 +121,12 @@ router.put('/books/:id', auth, multer, (req, res) => {
     } : { ...req.body };
 
     delete modBook._userId
-    Book.findOne({_id: req.params.id})
+    Book.findById( req.params.id )
         .then(book => {
             if(book.userId !== req.auth.userId) {
                 res.status(401).json({message : "Not authorized"})
             } else {
-                Book.updateOne({ _id: req.params.id }, { ...modBook, _id: req.params.id })
+                Book.findByIdAndUpdate(req.params.id, { ...modBook, _id: req.params.id })
                     .then(() => res.status(200).json({ message: 'book updated with success !'}))
                     .catch(error => res.status(400).json({ error }))
             }
@@ -107,14 +135,14 @@ router.put('/books/:id', auth, multer, (req, res) => {
 })
 
 router.delete('/books/:id', auth, (req, res) => {
-    Book.findOne({ _id: req.params.id })
+    Book.findById( req.params.id )
         .then(book => {
             if (book.userId != req.auth.userId) {
                 res.status(401).json({message: "not authorized"})
             } else {
                 const filename = book.imageUrl.split('/image/')[1]
                 fs.unlink(`images/${filename}`, () => {
-                    Book.deleteOne({ _id: req.params.id })
+                    Book.findByIdAndDelete( req.params.id )
                         .then(() => res.status(200).json({ message: 'book deleted !'}))
                         .catch(error => res.status(400).json({ error }))
                 })

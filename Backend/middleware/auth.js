@@ -8,7 +8,7 @@ const handleToken = (req, res, next) => {
         req.auth = {
             userId
         }
-    next()
+        next()
     } catch(error) {
         res.status(401).json({ error })
     }
