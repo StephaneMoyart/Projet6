@@ -41,13 +41,14 @@ export const create = (req, res) => {
 }
 
 export const rateOne = (req, res) => {
-    const userId = req.auth.userId;
-    const grade  = req.body.rating
+    const userId = req.auth.userId
+    const grade  = req.body.rating ?? null
     
+    if(grade > 5 || grade < 1 ) return res.status(400).json({ message: 'Rating must be between 1 and 5' }) 
     Book.findById( req.params.id )
     .then( book => {
         if (!book) {
-            return res.status(404).json({ message: 'Book not found' });
+            return res.status(404).json({ message: 'Book not found' })
         }
         const existingRating = book.ratings.find(rating => rating.userId === userId)
 
@@ -74,7 +75,7 @@ export const update = (req, res) => {
     const modBook = req.file ? {
         ...JSON.parse(req.body.book),
         imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
-    } : { ...req.body };
+    } : { ...req.body }
 
     delete modBook._userId
     Book.findById( req.params.id )
