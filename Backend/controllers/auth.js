@@ -7,7 +7,8 @@ export const signUp = async (req, res) => {
     try {
         const { password, email} = req.body
 
-        if (!password || !email) return res.status(400).json({message : "Email/password are required"})
+        if (!password || !email) throw new Error("Email/password are required")
+        if(!/^([^\s@]+)@([^\s@]+\.[^\s@]+)$/.test(email)) throw new Error("Invalid Mail")
         
         const hashedPassword = await bcrypt.hash(password, 10)
         
@@ -17,17 +18,17 @@ export const signUp = async (req, res) => {
         })
         res.status(201).json({ message: 'user saved, welcome !'})
     } catch (error) {
-        res.status(500).json({ error })
+        res.status(400).json({ error })
     }
 }
 
 export const login = async (req, res) => {
     try {
         const user = await User.findOne({email: req.body.email})
-        if (!user) return res.status(401).json({message: "Wrong id or password"})
+        if (!user) throw new Error("Wrong id or password")
 
         const isValid = await bcrypt.compare(req.body.password, user.password)
-        if(!isValid) return res.status(401).json({message: "Wrong id or password"})
+        if(!isValid) throw new Error("Wrong id or password")
         
         res.status(200).json({
             userId: user._id,
@@ -38,6 +39,7 @@ export const login = async (req, res) => {
             )
         })
     } catch (error) {
-        res.status(500).json({ error })
+        res.status(400).json({ error })
     }
 }
+

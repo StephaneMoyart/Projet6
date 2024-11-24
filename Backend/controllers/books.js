@@ -29,16 +29,18 @@ export const getById = async (req, res) => {
         const book = await Book.findById(req.params.id)
         res.status(200).json(book)
     } catch (error) {
-        res.status(500).json({ error })
+        res.status(404).json({ error })
     }
 }
 
 export const create = async (req, res) => {
     try {
+
         const addedBook = JSON.parse(req.body.book)
         delete addedBook._id
         delete addedBook._userId
-    
+        
+        addedBook.ratings = addedBook.ratings.filter(rating => rating.grade > 0 && rating.grade <= 5) 
         await Book.create({
             ...addedBook,
             userId: req.auth.userId,
@@ -56,7 +58,7 @@ export const rateOne = async (req, res) => {
         const userId = req.auth.userId
         const grade  = req.body.rating ?? null
         
-        if(grade > 5 || grade < 1 ) return res.status(400).json({ message: 'Rating must be between 1 and 5' }) 
+        if(grade === null || grade > 5 || grade < 0 ) return res.status(400).json({ message: 'Rating must be between 0 and 5' }) 
 
         const book = await Book.findById( req.params.id )
         if (!book) return res.status(404).json({ message: 'Book not found' })
@@ -66,7 +68,7 @@ export const rateOne = async (req, res) => {
 
         book.ratings.push({ userId, grade })
         const totalRatings = book.ratings.length
-        const averageRating = book.ratings.reduce((sum, rating) => sum + rating.grade, 0) / totalRatings
+        const averageRating = parseFloat((book.ratings.reduce((sum, rating) => sum + rating.grade, 0) / totalRatings).toFixed(2))
         book.averageRating = averageRating
 
         await book.save()
@@ -88,11 +90,27 @@ export const update = async (req, res) => {
         delete modBook._userId
 
         const book = await Book.findById( bookId )
+        if(!book) return res.status(404).json({ message : "not found"})
         if(book.userId !== req.auth.userId) return res.status(403).json({message : "unauthorized request"})
         
-        await Book.findByIdAndUpdate(bookId, { ...modBook, _id: bookId })
+        await Book.findByIdAndUpdate(
+            bookId, 
+            { ...modBook, _id: bookId },
+            { runValidators: true}
+        )
+
         res.status(200).json({ message: 'book updated with success !'})
-    } catch (error) {
+
+        if (req.file) {
+            const filename = book.imageUrl.split('/images/')[1]
+            try {
+                await fs.unlink(`images/${filename}`) 
+            } catch (unlinkError) {
+                console.error(unlinkError)
+            }
+        }
+
+    } catch (error) {        
         res.status(400).json({ error })
     }
 }
@@ -100,19 +118,21 @@ export const update = async (req, res) => {
 export const remove = async (req, res) => {
     try {
         const book = await Book.findById( req.params.id )
-            
+        if (!book) return res.status(404).json({ message: 'Book not found' })
+
         if(book.userId !== req.auth.userId) return res.status(403).json({message : "unauthorized request"})
             
+        await Book.findByIdAndDelete( req.params.id )
+        res.status(200).json({ message: 'book deleted !'})
+
         const filename = book.imageUrl.split('/images/')[1]
         try {
             await fs.unlink(`images/${filename}`) 
         } catch (unlinkError) {
             console.error(unlinkError)
         }
-
-        await Book.findByIdAndDelete( req.params.id )
-        res.status(200).json({ message: 'book deleted !'})
+        
     } catch (error) {
-        res.status(400).json({ error })
+        res.status(500).json({ error })
     }
 }

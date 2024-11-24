@@ -1,4 +1,5 @@
 import multer from 'multer'
+import path from 'path'
 
 const MIME_TYPES = {
     'image/jpg': 'jpg',
@@ -13,7 +14,7 @@ const storage = multer.diskStorage({
     filename: (req, file, callback) => {
         const name = file.originalname.split(' ').join('_')
         const extension = MIME_TYPES[file.mimetype]
-        callback(null, name + Date.now() + '.' + extension)
+        callback(null, name.replace(path.extname(name), '_' + Date.now() + '.' + extension))
     }
 })
 
