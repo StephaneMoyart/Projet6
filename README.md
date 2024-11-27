@@ -25,11 +25,22 @@ cd Backend
 npm install
 ```
 
+### Connecting a DB
+
+```
+cp .env.dist .env
+```
+
+You can create your own DB (on Atlas for exemple) and add your link to the DATABASE_URL in the .env file following their instructions. 
+Feel free to change your secret aswell.
+
+
 ### Running the Backend
 
 ```
 npm run devStart
 ```
+
 
 
 
