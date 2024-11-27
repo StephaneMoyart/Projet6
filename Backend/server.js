@@ -23,4 +23,4 @@ app
   .use(cors)
   .use('/api', apiRouter)
   .use('/images', express.static(path.join(__dirname, 'images')))
-  .listen(3000, () => console.log('^^server started^^'))
+  .listen(4000, () => console.log('^^server started^^'))
